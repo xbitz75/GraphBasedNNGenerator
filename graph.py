@@ -36,7 +36,7 @@ def getGraphInfo(graph):
 Node = collections.namedtuple('Node', ['id', 'inputs', 'type'])
 
 
-def parseGraph(graph):
+def _parseGraph(graph):
     _input_nodes = []
     _output_nodes = []
     _Nodes = []
@@ -55,15 +55,19 @@ def parseGraph(graph):
 
 
 def getNodes(graph):
-    return parseGraph(graph)[0]
+    return _parseGraph(graph)[0]
 
 
 def getInputNodes(graph):
-    return parseGraph(graph)[1]
+    return _parseGraph(graph)[1]
+
+
+def getOutputNodes(graph):
+    return _parseGraph(graph)[2]
 
 
 def graphToString(graph):
-    _parsed_graph = parseGraph(graph)
+    _parsed_graph = _parseGraph(graph)
     print("input nodes: {}".format(_parsed_graph[1]))
     print("output nodes: {}".format(_parsed_graph[2]))
     for node in _parsed_graph[0]:
