@@ -1,6 +1,7 @@
 from __future__ import absolute_import, division, print_function
 import graph as generator
 from tensorflow.python import keras as keras
+from tensorflow import math
 
 
 class TripletBlock(keras.Model):
@@ -27,8 +28,9 @@ class NodeToLayer(keras.Model):
         super(NodeToLayer, self).__init__(name="nodeToNN")
         self.node_type = node.type
         self.inputs = node.inputs
-        if len(self.inputs) > 1:
-            self.avrg = keras.layers.Average()
+        self.inputs_len = len(self.inputs)
+        if self.inputs_len > 2:
+            self.avrg = keras.layers.Concatenate()
             # self.merge = keras.layers.Concatenate()
             # if necessary use sigmoid to make sure values are positive
         if self.node_type == "input_node":
@@ -36,11 +38,11 @@ class NodeToLayer(keras.Model):
         else:
             self.block = TripletBlock(strides=1)
 
-    def call(self, *inputs):
-        if len(self.inputs) > 1:
+    def call(self, inputs):
+        if self.inputs_len > 2:
             # x = self.merge(self.inputs)
             x = self.avrg(inputs)
-            # x = tfmath.sigmoid(x)
+            x = math.sigmoid(x)
         else:
             x = inputs
         x = self.block(x)
@@ -82,8 +84,11 @@ class Network(keras.Model):
         if type == "small":
             self.triplet = TripletBlock(strides=2)
             graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
-            generator.drawGraph(graph)
-            self.stage = Stage(graph)
+            self.test_node = generator.getNodes(graph)
+            self.lay = NodeToLayer(self.test_node[4])
+            # graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
+            # generator.drawGraph(graph)
+            # self.stage = Stage(graph)
             # graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
             # generator.drawGraph(graph)
             # self.stage2 = Stage(graph)
@@ -101,7 +106,8 @@ class Network(keras.Model):
         self.start(x)
         self.batch(x)
         self.triplet(x)
-        self.stage(x)
+        self.lay(x)
+        # self.stage(x)
         # self.stage2(x)
         # self.stage3(x)
         # self.relu(x)
