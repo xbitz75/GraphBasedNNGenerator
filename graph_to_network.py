@@ -1,7 +1,16 @@
 from __future__ import absolute_import, division, print_function
 import graph as generator
 from tensorflow.python import keras as keras
+from tensorflow.python import map_fn
+from tensorflow.python import Variable
+from tensorflow.python import mat_mul
+from tensorflow.python import ones
+from tensorflow.python import zeros
 from tensorflow import math
+from tensorflow.python import enable_eager_execution
+from tensorflow.python import shape
+
+enable_eager_execution()
 
 
 class TripletBlock(keras.Model):
@@ -29,22 +38,20 @@ class NodeToLayer(keras.Model):
         self.node_type = node.type
         self.inputs = node.inputs
         self.inputs_len = len(self.inputs)
-        if self.inputs_len > 2:
-            self.avrg = keras.layers.Concatenate()
-            # self.merge = keras.layers.Concatenate()
-            # if necessary use sigmoid to make sure values are positive
+        if self.inputs_len > 1:
+            self.we_sum = Variable(initial_value=ones(self.inputs_len))
         if self.node_type == "input_node":
             self.block = TripletBlock(strides=2)
         else:
             self.block = TripletBlock(strides=1)
 
-    def call(self, inputs):
-        if self.inputs_len > 2:
-            # x = self.merge(self.inputs)
-            x = self.avrg(inputs)
-            x = math.sigmoid(x)
+    def call(self, *inputs):
+        if self.inputs_len > 1:
+            x = math.sigmoid(self.we_sum[0]) * inputs[0]
+            for i in range(1, self.inputs_len): # -1 due to index out of range
+                x = x + math.sigmoid(self.we_sum[i]) * inputs[i]
         else:
-            x = inputs
+            x = inputs[0]
         x = self.block(x)
         return x
 
@@ -83,21 +90,21 @@ class Network(keras.Model):
         self.batch = keras.layers.BatchNormalization()
         if type == "small":
             self.triplet = TripletBlock(strides=2)
-            graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
-            self.test_node = generator.getNodes(graph)
-            self.lay = NodeToLayer(self.test_node[4])
             # graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
-            # generator.drawGraph(graph)
-            # self.stage = Stage(graph)
+            # self.test_node = generator.getNodes(graph)
+            # self.lay = NodeToLayer(self.test_node[4])
+            graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
+            generator.drawGraph(graph)
+            self.stage = Stage(graph)
             # graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
             # generator.drawGraph(graph)
             # self.stage2 = Stage(graph)
             # graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
             # generator.drawGraph(graph)
             # self.stage3 = Stage(graph)
-            # self.relu = keras.layers.ReLU()
-            # self.conv = keras.layers.Conv2D(109*4, 1)
-            # self.batch2 = keras.layers.BatchNormalization()
+            self.relu = keras.layers.ReLU()
+            self.conv = keras.layers.Conv2D(109*4, 1)
+            self.batch2 = keras.layers.BatchNormalization()
 
             self.avrg = keras.layers.AveragePooling2D(7, 1)
             self.end = keras.layers.Dense(num_classes)
@@ -106,12 +113,12 @@ class Network(keras.Model):
         self.start(x)
         self.batch(x)
         self.triplet(x)
-        self.lay(x)
-        # self.stage(x)
+        # self.lay(x)
+        self.stage(x)
         # self.stage2(x)
         # self.stage3(x)
-        # self.relu(x)
-        # self.conv(x)
+        self.relu(x)
+        self.conv(x)
         self.avrg(x)
         self.end(x)
         return x
