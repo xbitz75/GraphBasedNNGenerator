@@ -5,7 +5,6 @@ from tensorflow.python import map_fn
 from tensorflow.python import Variable
 from tensorflow.python import mat_mul
 from tensorflow.python import ones
-from tensorflow.python import zeros
 from tensorflow import math
 from tensorflow.python import enable_eager_execution
 from tensorflow.python import shape
@@ -20,7 +19,7 @@ class TripletBlock(keras.Model):
         self._filters = filters
         self._strides = strides
         self.relu = keras.layers.ReLU()
-        self.dw_conv = keras.layers.DepthwiseConv2D(2, strides=strides)
+        self.dw_conv = keras.layers.DepthwiseConv2D(2, strides=strides, padding="same")
         self.conv = keras.layers.Conv2D(filters, 1)
         self.batch = keras.layers.BatchNormalization()
 
@@ -40,6 +39,7 @@ class NodeToLayer(keras.Model):
         self.inputs_len = len(self.inputs)
         if self.inputs_len > 1:
             self.we_sum = Variable(initial_value=ones(self.inputs_len))
+            # self.padding = keras.layers.ZeroPadding2D(padding=(1, 1))
         if self.node_type == "input_node":
             self.block = TripletBlock(strides=2)
         else:
@@ -48,9 +48,11 @@ class NodeToLayer(keras.Model):
     def call(self, *inputs):
         if self.inputs_len > 1:
             x = math.sigmoid(self.we_sum[0]) * inputs[0]
-            for i in range(1, self.inputs_len): # -1 due to index out of range
-                x = x + math.sigmoid(self.we_sum[i]) * inputs[i]
-        else:
+            for i in range(1, self.inputs_len):
+                y = math.sigmoid(self.we_sum[i]) * inputs[i]
+                # y = self.padding(y) # padding can be called recursively, implementation of input shape comparison is needed
+                x = x + y           # another solution would be use .pad()
+        else:                       # reshape() is also an option
             x = inputs[0]
         x = self.block(x)
         return x
@@ -77,7 +79,7 @@ class Stage(keras.Model):
         result = results[self.output_nodes[0]]
         for i, id in enumerate(self.output_nodes):
             if i > 0:
-                result = result + results[id]
+                result = result + results[id] # possible solution padding
         result = result / len(self.output_nodes)
         return result
 
@@ -96,12 +98,12 @@ class Network(keras.Model):
             graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
             generator.drawGraph(graph)
             self.stage = Stage(graph)
-            # graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
-            # generator.drawGraph(graph)
-            # self.stage2 = Stage(graph)
-            # graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
-            # generator.drawGraph(graph)
-            # self.stage3 = Stage(graph)
+            graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
+            generator.drawGraph(graph)
+            self.stage2 = Stage(graph)
+            graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
+            generator.drawGraph(graph)
+            self.stage3 = Stage(graph)
             self.relu = keras.layers.ReLU()
             self.conv = keras.layers.Conv2D(109*4, 1)
             self.batch2 = keras.layers.BatchNormalization()
@@ -115,10 +117,11 @@ class Network(keras.Model):
         self.triplet(x)
         # self.lay(x)
         self.stage(x)
-        # self.stage2(x)
-        # self.stage3(x)
+        self.stage2(x)
+        self.stage3(x)
         self.relu(x)
         self.conv(x)
+        self.batch2(x)
         self.avrg(x)
         self.end(x)
         return x
