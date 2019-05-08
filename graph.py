@@ -20,17 +20,13 @@ def generateGraph(type, number_of_nodes, number_of_neighbors, probability):
 def drawGraph(graph):
     plt.subplot(121)
     nx.draw_networkx(graph)
-    # plt.subplot(122)
-    # nx.draw_circular(graph)
+    #plt.savefig("graph.pdf") // saves graph as pdf file
     plt.show()
 
 
 def getGraphInfo(graph):
     print(nx.info(graph))
     print("Number of selfloops: {}".format(nx.number_of_selfloops(graph)))
-
-    # for node in nx.nodes(graph):
-    #     print(node)
 
 
 Node = collections.namedtuple('Node', ['id', 'inputs', 'type'])

@@ -81,35 +81,35 @@ class Stage(keras.Model):
 
 class Network(keras.Model):
 
-    def __init__(self, type, num_nodes, num_classes = 3472):
+    def __init__(self, type, num_nodes, num_classes = 3472, graph_type="WS", num_neighbors=4, probability=0.5):
         super(Network, self).__init__()
         self.start = keras.layers.DepthwiseConv2D(3, strides=2)
         self.batch = keras.layers.BatchNormalization()
         if type == "small":
             self.stage_start = TripletBlock(strides=2)
-            graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
+            graph = generator.generateGraph(graph_type, num_nodes, num_neighbors, probability)
             generator.drawGraph(graph)
             self.stage = Stage(graph)
-            graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
+            graph = generator.generateGraph(graph_type, num_nodes, num_neighbors, probability)
             generator.drawGraph(graph)
             self.stage2 = Stage(graph)
-            graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
+            graph = generator.generateGraph(graph_type, num_nodes, num_neighbors, probability)
             generator.drawGraph(graph)
             self.stage3 = Stage(graph)
             self.relu = keras.layers.ReLU()
             self.conv = keras.layers.Conv2D(109*4, 1)
             self.batch2 = keras.layers.BatchNormalization()
         elif type == "normal":
-            graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
+            graph = generator.generateGraph(graph_type, num_nodes, num_neighbors, probability)
             generator.drawGraph(graph)
             self.stage_start = Stage(graph)
-            graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
+            graph = generator.generateGraph(graph_type, num_nodes, num_neighbors, probability)
             generator.drawGraph(graph)
             self.stage = Stage(graph)
-            graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
+            graph = generator.generateGraph(graph_type, num_nodes, num_neighbors, probability)
             generator.drawGraph(graph)
             self.stage2 = Stage(graph)
-            graph = generator.generateGraph("WS", num_nodes, 4, 0.5)
+            graph = generator.generateGraph(graph_type, num_nodes, num_neighbors, probability)
             generator.drawGraph(graph)
             self.stage3 = Stage(graph)
             self.relu = keras.layers.ReLU()
